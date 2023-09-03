@@ -156,6 +156,8 @@ func getRequiredEnvVar(name string) string {
 	return val
 }
 
+// zhou: CDI controller is a group of controllers which work standalone.
+
 func start() {
 	klog.Info("Starting CDI controller components")
 
@@ -219,6 +221,8 @@ func start() {
 	}
 	uploadServerCertGenerator := &generator.FetchCertGenerator{Fetcher: uploadServerCAFetcher}
 
+	// zhou:
+
 	if _, err := controller.NewConfigController(mgr, log, uploadProxyServiceName, configName, installerLabels); err != nil {
 		klog.Errorf("Unable to setup config controller: %v", err)
 		os.Exit(1)
@@ -236,29 +240,45 @@ func start() {
 
 	ctx := signals.SetupSignalHandler()
 
+	// zhou: DataVolume Import controller
+
 	// TODO: Current DV controller had threadiness 3, should we do the same here, defaults to one thread.
 	if _, err := dvc.NewImportController(ctx, mgr, log, installerLabels); err != nil {
 		klog.Errorf("Unable to setup datavolume import controller: %v", err)
 		os.Exit(1)
 	}
+
+	// zhou: DataVolume Upload controller
+
 	if _, err := dvc.NewUploadController(ctx, mgr, log, installerLabels); err != nil {
 		klog.Errorf("Unable to setup datavolume upload controller: %v", err)
 		os.Exit(1)
 	}
+
+	// zhou: DataVolume PVC Clone controller
+
 	if _, err := dvc.NewPvcCloneController(ctx, mgr, log,
 		clonerImage, importerImage, pullPolicy, getTokenPublicKey(), getTokenPrivateKey(), installerLabels); err != nil {
 		klog.Errorf("Unable to setup datavolume pvc clone controller: %v", err)
 		os.Exit(1)
 	}
+
+	// zhou: DataVolume PVC Restore Snapshot controller
+
 	if _, err := dvc.NewSnapshotCloneController(ctx, mgr, log,
 		clonerImage, importerImage, pullPolicy, getTokenPublicKey(), getTokenPrivateKey(), installerLabels); err != nil {
 		klog.Errorf("Unable to setup datavolume snapshot clone controller: %v", err)
 		os.Exit(1)
 	}
+
+	// zhou: DataVolume Polulator  controller
+
 	if _, err := dvc.NewPopulatorController(ctx, mgr, log, installerLabels); err != nil {
 		klog.Errorf("Unable to setup datavolume external-population controller: %v", err)
 		os.Exit(1)
 	}
+
+	// zhou:
 
 	if _, err := controller.NewImportController(mgr, log, importerImage, pullPolicy, verbose, installerLabels); err != nil {
 		klog.Errorf("Unable to setup import controller: %v", err)
@@ -317,6 +337,8 @@ func start() {
 		os.Exit(1)
 	}
 }
+
+// zhou: CDI controller, should be deployed by CDI operator
 
 func main() {
 	defer klog.Flush()

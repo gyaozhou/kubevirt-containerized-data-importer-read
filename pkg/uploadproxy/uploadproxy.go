@@ -179,6 +179,8 @@ func (app *uploadProxyApp) handleHealthzRequest(w http.ResponseWriter, r *http.R
 	}
 }
 
+// zhou:
+
 func (app *uploadProxyApp) handleUploadRequest(w http.ResponseWriter, r *http.Request) {
 	tokenHeader := r.Header.Get("Authorization")
 	if tokenHeader == "" {

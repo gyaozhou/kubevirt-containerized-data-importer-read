@@ -51,6 +51,8 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }
 
+// zhou: CDI operator
+
 func main() {
 	flag.Parse()
 
@@ -86,6 +88,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	// zhou: build on controller-runtime
+
 	managerOpts := manager.Options{
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{
@@ -104,6 +108,8 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	// zhou: CDI operator will handle such API.
 
 	log.Info("Registering Components.")
 
@@ -141,6 +147,8 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	// zhou:
 
 	// Setup the controller
 	if err := controller.Add(mgr); err != nil {

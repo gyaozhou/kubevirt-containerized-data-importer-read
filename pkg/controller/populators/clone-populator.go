@@ -81,6 +81,8 @@ type ClonePopulatorReconciler struct {
 	multiTokenValidator *cc.MultiTokenValidator
 }
 
+// zhou: README,
+
 // NewClonePopulator creates a new instance of the clone-populator controller
 func NewClonePopulator(
 	ctx context.Context,

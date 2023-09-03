@@ -91,6 +91,8 @@ func touchDoneFile() {
 	f.Close()
 }
 
+// zhou: Importer Pod ??
+
 func main() {
 	defer klog.Flush()
 
@@ -162,6 +164,8 @@ func handleEmptyImage(contentType string, imageSize string, availableDestSpace i
 	err := writeTerminationMessage(&common.TerminationMessage{PreallocationApplied: ptr.To(preallocation)})
 	return err
 }
+
+// zhou: README,
 
 func handleImport(
 	source string,
@@ -240,6 +244,8 @@ func getImporterDestPath(contentType string, volumeMode v1.PersistentVolumeMode)
 
 	return dest
 }
+
+// zhou: README,
 
 func newDataSource(source string, contentType string, volumeMode v1.PersistentVolumeMode) importer.DataSourceInterface {
 	ep, _ := util.ParseEnvVar(common.ImporterEndpoint, false)

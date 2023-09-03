@@ -22,6 +22,8 @@ import (
 	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/api"
 )
 
+// zhou:
+
 // DataVolume is an abstraction on top of PersistentVolumeClaims to allow easy population of those PersistentVolumeClaims with relation to VirtualMachines
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -44,28 +46,46 @@ type DataVolume struct {
 
 // DataVolumeSpec defines the DataVolume type specification
 type DataVolumeSpec struct {
+
+	// zhou: all kinds of data source
+
 	//Source is the src of the data for the requested DataVolume
 	// +optional
 	Source *DataVolumeSource `json:"source,omitempty"`
+
+	// zhou: GVK
+
 	//SourceRef is an indirect reference to the source of data for the requested DataVolume
 	// +optional
 	SourceRef *DataVolumeSourceRef `json:"sourceRef,omitempty"`
+
+	// zhou: how to create the PVC
+
 	//PVC is the PVC specification
 	PVC *corev1.PersistentVolumeClaimSpec `json:"pvc,omitempty"`
+
+	// zhou: how to create the PVC with less info
+
 	// Storage is the requested storage specification
 	Storage *StorageSpec `json:"storage,omitempty"`
+
 	//PriorityClassName for Importer, Cloner and Uploader pod
 	PriorityClassName string `json:"priorityClassName,omitempty"`
+
 	//DataVolumeContentType options: "kubevirt", "archive"
 	// +kubebuilder:validation:Enum="kubevirt";"archive"
 	ContentType DataVolumeContentType `json:"contentType,omitempty"`
+
 	// Checkpoints is a list of DataVolumeCheckpoints, representing stages in a multistage import.
 	Checkpoints []DataVolumeCheckpoint `json:"checkpoints,omitempty"`
 	// FinalCheckpoint indicates whether the current DataVolumeCheckpoint is the final checkpoint.
 	FinalCheckpoint bool `json:"finalCheckpoint,omitempty"`
+
 	// Preallocation controls whether storage for DataVolumes should be allocated in advance.
 	Preallocation *bool `json:"preallocation,omitempty"`
 }
+
+// zhou: most of them could be specified in PVC, why need it ???
 
 // StorageSpec defines the Storage type specification
 type StorageSpec struct {
@@ -91,10 +111,12 @@ type StorageSpec struct {
 	// Value of Filesystem is implied when not included in claim spec.
 	// +optional
 	VolumeMode *corev1.PersistentVolumeMode `json:"volumeMode,omitempty"`
+
 	// This field can be used to specify either: * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot) * An existing PVC (PersistentVolumeClaim) * An existing custom resource that implements data population (Alpha) In order to use custom resource types that implement data population, the AnyVolumeDataSource feature gate must be enabled. If the provisioner or an external controller can support the specified data source, it will create a new volume based on the contents of the specified data source.
 	// If the AnyVolumeDataSource feature gate is enabled, this field will always have the same contents as the DataSourceRef field.
 	// +optional
 	DataSource *corev1.TypedLocalObjectReference `json:"dataSource,omitempty"`
+
 	// Specifies the object from which to populate the volume with data, if a non-empty volume is desired. This may be any local object from a non-empty API group (non core object) or a PersistentVolumeClaim object. When this field is specified, volume binding will only succeed if the type of the specified object matches some installed volume populator or dynamic provisioner.
 	// This field will replace the functionality of the DataSource field and as such if both fields are non-empty, they must have the same value. For backwards compatibility, both fields (DataSource and DataSourceRef) will be set to the same value automatically if one of them is empty and the other is non-empty.
 	// There are two important differences between DataSource and DataSourceRef:
@@ -116,6 +138,8 @@ type DataVolumeCheckpoint struct {
 	Current string `json:"current"`
 }
 
+// zhou: "archive" means the file need to be extracted before converting and copying.
+
 // DataVolumeContentType represents the types of the imported data
 type DataVolumeContentType string
 
@@ -125,6 +149,8 @@ const (
 	// DataVolumeArchive is the content-type to specify if there is a need to extract the imported archive
 	DataVolumeArchive DataVolumeContentType = "archive"
 )
+
+// zhou: used to specify all kinds of data source
 
 // DataVolumeSource represents the source for our Data Volume, this can be HTTP, Imageio, S3, GCS, Registry or an existing PVC
 type DataVolumeSource struct {
@@ -218,6 +244,8 @@ const (
 	RegistryPullNode RegistryPullMethod = "node"
 )
 
+// zhou: README,
+
 // DataVolumeSourceHTTP can be either an http or https endpoint, with an optional basic auth user name and password, and an optional configmap containing additional CAs
 type DataVolumeSourceHTTP struct {
 	// URL is the URL of the http(s) endpoint
@@ -263,6 +291,8 @@ type DataVolumeSourceVDDK struct {
 	// InitImageURL is an optional URL to an image containing an extracted VDDK library, overrides v2v-vmware config map
 	InitImageURL string `json:"initImageURL,omitempty"`
 }
+
+// zhou: like GVK
 
 // DataVolumeSourceRef defines an indirect reference to the source of data for the DataVolume
 type DataVolumeSourceRef struct {
@@ -320,6 +350,8 @@ type DataVolumeProgress string
 
 // DataVolumeConditionType is the string representation of known condition types
 type DataVolumeConditionType string
+
+// zhou: DataVolume phase enumeration.
 
 const (
 	// PhaseUnset represents a data volume with no current phase
@@ -397,6 +429,8 @@ const (
 // DataVolumeCloneSourceSubresource is the subresource checked for permission to clone
 const DataVolumeCloneSourceSubresource = "source"
 
+// zhou: the preference of CDI using PVC.
+
 // this has to be here otherwise informer-gen doesn't recognize it
 // see https://github.com/kubernetes/code-generator/issues/59
 // +genclient:nonNamespaced
@@ -419,9 +453,13 @@ type StorageProfile struct {
 type StorageProfileSpec struct {
 	// CloneStrategy defines the preferred method for performing a CDI clone
 	CloneStrategy *CDICloneStrategy `json:"cloneStrategy,omitempty"`
+
+	// zhou: default AccessMode and VolumeMode
+
 	// ClaimPropertySets is a provided set of properties applicable to PVC
 	// +kubebuilder:validation:MaxItems=8
 	ClaimPropertySets []ClaimPropertySet `json:"claimPropertySets,omitempty"`
+
 	// DataImportCronSourceFormat defines the format of the DataImportCron-created disk image sources
 	DataImportCronSourceFormat *DataImportCronSourceFormat `json:"dataImportCronSourceFormat,omitempty"`
 	// SnapshotClass is optional specific VolumeSnapshotClass for CloneStrategySnapshot. If not set, a VolumeSnapshotClass is chosen according to the provisioner.
@@ -467,6 +505,8 @@ type StorageProfileList struct {
 	// Items provides a list of StorageProfile
 	Items []StorageProfile `json:"items"`
 }
+
+// zhou: ???
 
 // DataSource references an import/clone source for a DataVolume
 // +genclient
@@ -535,6 +575,8 @@ type DataSourceList struct {
 	// Items provides a list of DataSources
 	Items []DataSource `json:"items"`
 }
+
+// zhou: used in golden image management.
 
 // DataImportCron defines a cron job for recurring polling/importing disk images as PVCs into a golden image namespace
 // +genclient
@@ -642,6 +684,8 @@ type DataImportCronList struct {
 	Items []DataImportCron `json:"items"`
 }
 
+// zhou: volume populator, Import source.
+
 // VolumeImportSource works as a specification to populate PersistentVolumeClaims with data
 // imported from an HTTP/S3/Registry/Blank/ImageIO/VDDK source
 // +genclient
@@ -698,6 +742,8 @@ type VolumeImportSourceList struct {
 	Items []VolumeImportSource `json:"items"`
 }
 
+// zhou: volume populator, Upload source.
+
 // VolumeUploadSource is a specification to populate PersistentVolumeClaims with upload data
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -734,6 +780,8 @@ type VolumeUploadSourceList struct {
 	Items []VolumeImportSource `json:"items"`
 }
 
+// zhou:
+
 const (
 	// VolumeImportSourceRef is import source for DataSourceRef for PVC
 	VolumeImportSourceRef = "VolumeImportSource"
@@ -742,6 +790,8 @@ const (
 	// VolumeCloneSourceRef is smart clone source for DataSourceRef for PVC
 	VolumeCloneSourceRef = "VolumeCloneSource"
 )
+
+// zhou: volume populator, Clone source.
 
 // VolumeCloneSource refers to a PVC/VolumeSnapshot of any storageclass/volumemode
 // to be used as the source of a new PVC
@@ -778,6 +828,8 @@ type VolumeCloneSourceList struct {
 	// Items provides a list of DataSources
 	Items []VolumeCloneSource `json:"items"`
 }
+
+// zhou: used to trigger CDI controller deployment
 
 // this has to be here otherwise informer-gen doesn't recognize it
 // see https://github.com/kubernetes/code-generator/issues/59
@@ -821,6 +873,8 @@ type CDICertConfig struct {
 	Server *CertConfig `json:"server,omitempty"`
 }
 
+// zhou: CDI controller config.
+
 // CDISpec defines our specification for the CDI installation
 type CDISpec struct {
 	// +kubebuilder:validation:Enum=Always;IfNotPresent;Never
@@ -837,10 +891,13 @@ type CDISpec struct {
 	// Clone strategy override: should we use a host-assisted copy even if snapshots are available?
 	// +kubebuilder:validation:Enum="copy";"snapshot";"csi-clone"
 	CloneStrategyOverride *CDICloneStrategy `json:"cloneStrategyOverride,omitempty"`
+
 	// CDIConfig at CDI level
 	Config *CDIConfigSpec `json:"config,omitempty"`
+
 	// certificate configuration
 	CertConfig *CDICertConfig `json:"certConfig,omitempty"`
+
 	// PriorityClass of the CDI control plane
 	PriorityClass *CDIPriorityClass `json:"priorityClass,omitempty"`
 }
@@ -859,6 +916,8 @@ type ComponentConfig struct {
 
 // CDIPriorityClass defines the priority class of the CDI control plane.
 type CDIPriorityClass string
+
+// zhou: README,
 
 // CDICloneStrategy defines the preferred method for performing a CDI clone (override snapshot?)
 type CDICloneStrategy string

@@ -231,6 +231,8 @@ func isSupportedFormat(value string) bool {
 	}
 }
 
+// zhou: README,
+
 func checkIfURLIsValid(info *ImgInfo, availableSize int64, image string) error {
 	if !isSupportedFormat(info.Format) {
 		return errors.Errorf("Invalid format %s for image %s", info.Format, image)
@@ -247,6 +249,8 @@ func checkIfURLIsValid(info *ImgInfo, availableSize int64, image string) error {
 	}
 	return nil
 }
+
+// zhou:
 
 func (o *qemuOperations) Validate(url *url.URL, availableSize int64) error {
 	info, err := o.Info(url)

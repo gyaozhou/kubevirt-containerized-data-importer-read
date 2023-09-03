@@ -235,8 +235,15 @@ func extractAvailablePersistentVolumeStorageClassName(obj client.Object) []strin
 	return nil
 }
 
+// zhou: README, add common watches for these controllers:
+//       external-population-controller/import-controller/pvc-clone-controller/snapshot-clone-controller/upload-controller
+
 func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeController controller.Controller, op dataVolumeOp) error {
+
 	appendMatchingDataVolumeRequest := func(ctx context.Context, reqs []reconcile.Request, mgr manager.Manager, namespace, name string) []reconcile.Request {
+
+		// zhou: get DataVolume object with type "dataVolumeImport"
+
 		dvKey := types.NamespacedName{Namespace: namespace, Name: name}
 		dv := &cdiv1.DataVolume{}
 		if err := mgr.GetClient().Get(ctx, dvKey, dv); err != nil {
@@ -251,6 +258,8 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 		return reqs
 	}
 
+	// zhou: watch DataVolume with type "dataVolumeImport"
+
 	// Setup watches
 	if err := dataVolumeController.Watch(source.Kind(mgr.GetCache(), &cdiv1.DataVolume{}), handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -264,6 +273,9 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 	); err != nil {
 		return err
 	}
+
+	// zhou: watch PVC, but reconcile its owner DataVolume
+
 	if err := dataVolumeController.Watch(source.Kind(mgr.GetCache(), &corev1.PersistentVolumeClaim{}), handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			var result []reconcile.Request
@@ -271,6 +283,9 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 			if owner != nil && owner.Kind == "DataVolume" {
 				result = appendMatchingDataVolumeRequest(ctx, result, mgr, obj.GetNamespace(), owner.Name)
 			}
+
+			// zhou: "cdi.kubevirt.io/storage.populatedFor"
+
 			populatedFor := obj.GetAnnotations()[cc.AnnPopulatedFor]
 			if populatedFor != "" {
 				result = appendMatchingDataVolumeRequest(ctx, result, mgr, obj.GetNamespace(), populatedFor)
@@ -281,6 +296,9 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 	); err != nil {
 		return err
 	}
+
+	// zhou: watch Pod, but reconcile its owner DataVolume
+
 	if err := dataVolumeController.Watch(source.Kind(mgr.GetCache(), &corev1.Pod{}), handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			owner := metav1.GetControllerOf(obj)
@@ -292,6 +310,9 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 	); err != nil {
 		return err
 	}
+
+	// zhou: watch PVC/ObjectTransfer, but reconcile its owner DataVolume
+
 	for _, k := range []client.Object{&corev1.PersistentVolumeClaim{}, &corev1.Pod{}, &cdiv1.ObjectTransfer{}} {
 		if err := dataVolumeController.Watch(source.Kind(mgr.GetCache(), k), handler.EnqueueRequestsFromMapFunc(
 			func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -308,6 +329,8 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 			return err
 		}
 	}
+
+	// zhou: Watch for SC updates and reconcile the DVs waiting for default SC
 
 	// Watch for SC updates and reconcile the DVs waiting for default SC
 	// Relevant only when the DV StorageSpec has no AccessModes set and no matching StorageClass yet, so PVC cannot be created (test_id:9922)
@@ -329,6 +352,8 @@ func addDataVolumeControllerCommonWatches(mgr manager.Manager, dataVolumeControl
 	); err != nil {
 		return err
 	}
+
+	// zhou: Watch for PV updates to reconcile the DVs waiting for available PV
 
 	// Watch for PV updates to reconcile the DVs waiting for available PV
 	// Relevant only when the DV StorageSpec has no AccessModes set and no matching StorageClass yet, so PVC cannot be created (test_id:9924,9925)
@@ -450,6 +475,8 @@ type dvController interface {
 	sync(log logr.Logger, req reconcile.Request) (dvSyncResult, error)
 	updateStatusPhase(pvc *corev1.PersistentVolumeClaim, dataVolumeCopy *cdiv1.DataVolume, event *Event) error
 }
+
+// zhou: do nothing, just framework
 
 func (r *ReconcilerBase) reconcile(ctx context.Context, req reconcile.Request, dvc dvController) (reconcile.Result, error) {
 	log := r.log.WithValues("DataVolume", req.NamespacedName)
@@ -1120,6 +1147,8 @@ func updateProgressUsingPod(dataVolumeCopy *cdiv1.DataVolume, pod *corev1.Pod) e
 	return nil
 }
 
+// zhou: expected PVC
+
 // newPersistentVolumeClaim creates a new PVC for the DataVolume resource.
 // It also sets the appropriate OwnerReferences on the resource
 // which allows handleObject to discover the DataVolume resource
@@ -1169,6 +1198,8 @@ func (r *ReconcilerBase) newPersistentVolumeClaim(dataVolume *cdiv1.DataVolume, 
 		},
 		Spec: *targetPvcSpec,
 	}
+
+	// zhou: updated expected PVC spec.
 
 	if pvcModifier != nil {
 		if err := pvcModifier(dataVolume, pvc); err != nil {
@@ -1251,6 +1282,8 @@ func (r *ReconcilerBase) shouldBeMarkedWaitForFirstConsumer(pvc *corev1.Persiste
 	return res, nil
 }
 
+// zhou: according to PVC's annotation, DataVolume is not completed.
+
 func (r *ReconcilerBase) shouldReconcileVolumeSourceCR(syncState *dvSyncState) bool {
 	if syncState.pvc == nil {
 		return true
@@ -1270,6 +1303,8 @@ func (r *ReconcilerBase) shouldBeMarkedPendingPopulation(pvc *corev1.PersistentV
 
 	return wffc && nodeName == "" && !immediateBindingRequested, nil
 }
+
+// zhou: create PVC for DataVolume
 
 // handlePvcCreation works as a wrapper for non-clone PVC creation and error handling
 func (r *ReconcilerBase) handlePvcCreation(log logr.Logger, syncState *dvSyncState, pvcModifier pvcModifierFunc) error {
@@ -1294,6 +1329,8 @@ func (r *ReconcilerBase) handlePvcCreation(log logr.Logger, syncState *dvSyncSta
 
 	return nil
 }
+
+// zhou: using CDI Populator if possible.
 
 // shouldUseCDIPopulator returns if the population of the PVC should be done using
 // CDI populators.

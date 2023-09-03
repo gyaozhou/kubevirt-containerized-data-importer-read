@@ -458,6 +458,8 @@ func (r *CDIConfigReconciler) Init() error {
 	return err
 }
 
+// zhou: README,
+
 // NewConfigController creates a new instance of the config controller.
 func NewConfigController(mgr manager.Manager, log logr.Logger, uploadProxyServiceName, configName string, installerLabels map[string]string) (controller.Controller, error) {
 	uncachedClient, err := client.New(mgr.GetConfig(), client.Options{

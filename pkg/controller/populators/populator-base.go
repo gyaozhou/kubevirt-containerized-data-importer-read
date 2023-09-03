@@ -119,6 +119,8 @@ func CreateCommonPopulatorIndexes(mgr manager.Manager) error {
 	return nil
 }
 
+// zhou:
+
 func addCommonPopulatorsWatches(mgr manager.Manager, c controller.Controller, log logr.Logger, sourceKind string, sourceType client.Object) error {
 	// Setup watches
 	if err := c.Watch(source.Kind(mgr.GetCache(), &corev1.PersistentVolumeClaim{}), handler.EnqueueRequestsFromMapFunc(
@@ -174,6 +176,8 @@ func (r *ReconcilerBase) getPVCPrime(pvc *corev1.PersistentVolumeClaim) (*corev1
 	}
 	return pvcPrime, nil
 }
+
+// zhou: README, create scratch space PVC
 
 func (r *ReconcilerBase) createPVCPrime(pvc *corev1.PersistentVolumeClaim, source client.Object, waitForFirstConsumer bool, updatePVCForPopulation pvcModifierFunc) (*corev1.PersistentVolumeClaim, error) {
 	labels := make(map[string]string)
@@ -270,6 +274,8 @@ func (r *ReconcilerBase) updatePVCWithPVCPrimeLabels(pvc *corev1.PersistentVolum
 	return nil
 }
 
+// zhou: README,
+
 // reconcile functions
 
 func (r *ReconcilerBase) reconcile(req reconcile.Request, populator populatorController, pvcNameLogger logr.Logger) (reconcile.Result, error) {
@@ -341,6 +347,8 @@ func (r *ReconcilerBase) reconcileCommon(pvc *corev1.PersistentVolumeClaim, popu
 	if !ready || err != nil {
 		return nil, err
 	}
+
+	// zhou: create scratch space PVC
 
 	// If PVC' doesn't exist and target PVC is not bound, we should create the PVC' to start the population.
 	// We still return nil as we'll get called again once PVC' exists.

@@ -364,6 +364,8 @@ func MakeEmptyStorageProfileSpec(name string) *cdiv1.StorageProfile {
 	}
 }
 
+// zhou: README,
+
 // NewStorageProfileController creates a new instance of the StorageProfile controller.
 func NewStorageProfileController(mgr manager.Manager, log logr.Logger, installerLabels map[string]string) (controller.Controller, error) {
 	uncachedClient, err := client.New(mgr.GetConfig(), client.Options{

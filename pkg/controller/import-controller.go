@@ -119,8 +119,13 @@ type importerPodArgs struct {
 	priorityClassName       string
 }
 
+// zhou: "import-controller", NOT "datavolume-import-controller"
+//       Used to handle PVC with annotation "cdi.kubevirt.io/externalPopulation".
+//       README, Looks like monitor the progress of importing, including PVC and Importer Pod.
+
 // NewImportController creates a new instance of the import controller.
 func NewImportController(mgr manager.Manager, log logr.Logger, importerImage, pullPolicy, verbose string, installerLabels map[string]string) (controller.Controller, error) {
+
 	uncachedClient, err := client.New(mgr.GetConfig(), client.Options{
 		Scheme: mgr.GetScheme(),
 		Mapper: mgr.GetRESTMapper(),
@@ -129,6 +134,7 @@ func NewImportController(mgr manager.Manager, log logr.Logger, importerImage, pu
 		return nil, err
 	}
 	client := mgr.GetClient()
+
 	reconciler := &ImportReconciler{
 		client:          client,
 		uncachedClient:  uncachedClient,
@@ -149,6 +155,9 @@ func NewImportController(mgr manager.Manager, log logr.Logger, importerImage, pu
 	if err != nil {
 		return nil, err
 	}
+
+	// zhou: setup controller watch
+
 	if err := addImportControllerWatches(mgr, importController); err != nil {
 		return nil, err
 	}
@@ -156,10 +165,16 @@ func NewImportController(mgr manager.Manager, log logr.Logger, importerImage, pu
 }
 
 func addImportControllerWatches(mgr manager.Manager, importController controller.Controller) error {
+
+	// zhou: watch PVC
+
 	// Setup watches
 	if err := importController.Watch(source.Kind(mgr.GetCache(), &corev1.PersistentVolumeClaim{}), &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
+
+	// zhou: enqueue owner PVC of the Pod
+
 	if err := importController.Watch(source.Kind(mgr.GetCache(), &corev1.Pod{}), handler.EnqueueRequestForOwner(
 		mgr.GetScheme(), mgr.GetClient().RESTMapper(), &corev1.PersistentVolumeClaim{}, handler.OnlyControllerOwner())); err != nil {
 		return err
@@ -170,6 +185,9 @@ func addImportControllerWatches(mgr manager.Manager, importController controller
 
 func (r *ImportReconciler) shouldReconcilePVC(pvc *corev1.PersistentVolumeClaim,
 	log logr.Logger) (bool, error) {
+
+	// zhou: annotation "cdi.kubevirt.io/externalPopulation"
+
 	_, pvcUsesExternalPopulator := pvc.Annotations[cc.AnnExternalPopulation]
 	if pvcUsesExternalPopulator {
 		return false, nil
@@ -234,6 +252,8 @@ func (r *ImportReconciler) findImporterPod(pvc *corev1.PersistentVolumeClaim, lo
 	log.V(1).Info("Pod is owned by PVC", pod.Name, pvc.Name)
 	return pod, nil
 }
+
+// zhou: README,
 
 func (r *ImportReconciler) reconcilePvc(pvc *corev1.PersistentVolumeClaim, log logr.Logger) (reconcile.Result, error) {
 	// See if we have a pod associated with the PVC, we know the PVC has the needed annotations.
@@ -476,6 +496,8 @@ func (r *ImportReconciler) updatePVC(pvc *corev1.PersistentVolumeClaim, log logr
 	}
 	return nil
 }
+
+// zhou:
 
 func (r *ImportReconciler) createImporterPod(pvc *corev1.PersistentVolumeClaim) error {
 	r.log.V(1).Info("Creating importer POD for PVC", "pvc.Name", pvc.Name)
@@ -839,6 +861,8 @@ func getImportPodNameFromPvc(pvc *corev1.PersistentVolumeClaim) string {
 func createImportPodNameFromPvc(pvc *corev1.PersistentVolumeClaim) string {
 	return naming.GetResourceName(common.ImporterPodName, podNameWithCheckpoint(pvc))
 }
+
+// zhou: README,
 
 // createImporterPod creates and returns a pointer to a pod which is created based on the passed-in endpoint, secret
 // name, and pvc. A nil secret means the endpoint credentials are not passed to the

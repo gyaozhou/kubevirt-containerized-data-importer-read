@@ -927,6 +927,8 @@ func (r *DataImportCronReconciler) deleteJobs(ctx context.Context, cron types.Na
 	return nil
 }
 
+// zhou: README,
+
 // NewDataImportCronController creates a new instance of the DataImportCron controller
 func NewDataImportCronController(mgr manager.Manager, log logr.Logger, importerImage, pullPolicy string, installerLabels map[string]string) (controller.Controller, error) {
 	uncachedClient, err := client.New(mgr.GetConfig(), client.Options{

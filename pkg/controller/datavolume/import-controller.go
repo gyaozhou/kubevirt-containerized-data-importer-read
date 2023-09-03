@@ -64,6 +64,8 @@ const (
 
 	importControllerName = "datavolume-import-controller"
 
+	// zhou: VolumeImportSource objects nameing prefix
+
 	volumeImportSourcePrefix = "volume-import-source"
 )
 
@@ -72,6 +74,9 @@ type ImportReconciler struct {
 	ReconcilerBase
 }
 
+// zhou: "datavolume-import-controller", NOT "import-controller".
+//       Used to watch DataVolume
+
 // NewImportController creates a new instance of the datavolume import controller
 func NewImportController(
 	ctx context.Context,
@@ -79,6 +84,7 @@ func NewImportController(
 	log logr.Logger,
 	installerLabels map[string]string,
 ) (controller.Controller, error) {
+
 	client := mgr.GetClient()
 	reconciler := &ImportReconciler{
 		ReconcilerBase: ReconcilerBase{
@@ -99,6 +105,7 @@ func NewImportController(
 	if err != nil {
 		return nil, err
 	}
+
 	if err := addDataVolumeImportControllerWatches(mgr, datavolumeController); err != nil {
 		return nil, err
 	}
@@ -106,16 +113,27 @@ func NewImportController(
 	return datavolumeController, nil
 }
 
+// zhou: watch DataVolume/VolumeImportSource, and reconcile DataVolume
+
 func addDataVolumeImportControllerWatches(mgr manager.Manager, datavolumeController controller.Controller) error {
+
+	// zhou: watch DataVolume with type of "dataVolumeImport",
+	//       and watch other PVC/Pod/StorageClass/... which depends on DataVolume, but reconcile DataVolume.
+
 	if err := addDataVolumeControllerCommonWatches(mgr, datavolumeController, dataVolumeImport); err != nil {
 		return err
 	}
+
+	// zhou: watch VolumeImportSource objects, but reconcile its owner DataVolume object.
+
 	if err := datavolumeController.Watch(source.Kind(mgr.GetCache(), &cdiv1.VolumeImportSource{}), handler.EnqueueRequestForOwner(
 		mgr.GetScheme(), mgr.GetClient().RESTMapper(), &cdiv1.DataVolume{}, handler.OnlyControllerOwner())); err != nil {
 		return err
 	}
 	return nil
 }
+
+// zhou: add DataSourceRef into expected PVC.
 
 func (r *ImportReconciler) updatePVCForPopulation(dataVolume *cdiv1.DataVolume, pvc *corev1.PersistentVolumeClaim) error {
 	if dataVolume.Spec.Source.HTTP == nil &&
@@ -127,9 +145,15 @@ func (r *ImportReconciler) updatePVCForPopulation(dataVolume *cdiv1.DataVolume, 
 		dataVolume.Spec.Source.Blank == nil {
 		return errors.Errorf("no source set for import datavolume")
 	}
+
+	// zhou: in case CDI doesn't enable WaitForFirstConsumer support, using Immediate anyway.
+
 	if err := cc.AddImmediateBindingAnnotationIfWFFCDisabled(pvc, r.featureGates); err != nil {
 		return err
 	}
+
+	// zhou: add PVC's DataSource
+
 	apiGroup := cc.AnnAPIGroup
 	pvc.Spec.DataSourceRef = &corev1.TypedObjectReference{
 		APIGroup: &apiGroup,
@@ -192,6 +216,8 @@ func (r *ImportReconciler) sync(log logr.Logger, req reconcile.Request) (dvSyncR
 	return syncState.dvSyncResult, err
 }
 
+// zhou: create VolumeImportSource and PVC corresponding to DataVolume
+
 func (r *ImportReconciler) syncImport(log logr.Logger, req reconcile.Request) (dvSyncState, error) {
 	syncState, syncErr := r.syncCommon(log, req, r.cleanup, nil)
 	if syncErr != nil || syncState.result != nil {
@@ -201,6 +227,9 @@ func (r *ImportReconciler) syncImport(log logr.Logger, req reconcile.Request) (d
 	pvcModifier := r.updateAnnotations
 	if syncState.usePopulator {
 		if r.shouldReconcileVolumeSourceCR(&syncState) {
+
+			// zhou: create "VolumeImportSource"
+
 			err := r.reconcileVolumeImportSourceCR(&syncState)
 			if err != nil {
 				return syncState, err
@@ -209,9 +238,13 @@ func (r *ImportReconciler) syncImport(log logr.Logger, req reconcile.Request) (d
 		pvcModifier = r.updatePVCForPopulation
 	}
 
+	// zhou: create PVC
+
 	if err := r.handlePvcCreation(log, &syncState, pvcModifier); err != nil {
 		syncErr = err
 	}
+
+	// zhou: udpate annoatation.
 
 	if syncState.pvc != nil && syncErr == nil && !syncState.usePopulator {
 		r.setVddkAnnotations(&syncState)
@@ -336,9 +369,13 @@ func (r *ImportReconciler) getCheckpointArgs(dv *cdiv1.DataVolume) *cc.Checkpoin
 	}
 }
 
+// zhou: VolumeImportSource object name corresponding to the DataVolume
+
 func volumeImportSourceName(dv *cdiv1.DataVolume) string {
 	return fmt.Sprintf("%s-%s", volumeImportSourcePrefix, dv.UID)
 }
+
+// zhou: create "VolumeImportSource"
 
 func (r *ImportReconciler) reconcileVolumeImportSourceCR(syncState *dvSyncState) error {
 	dv := syncState.dvMutated
@@ -349,10 +386,14 @@ func (r *ImportReconciler) reconcileVolumeImportSourceCR(syncState *dvSyncState)
 
 	// check if import source already exists
 	if exists, err := cc.GetResource(context.TODO(), r.client, dv.Namespace, importSourceName, importSource); err != nil {
+		// zhou: not include "IsNotFound"
+
 		return err
 	} else if exists {
 		return r.updateVolumeImportSourceIfNeeded(importSource, dv, isMultiStage)
 	}
+
+	// zhou: VolumeImportSource object "IsNotFound", create expected object
 
 	source := &cdiv1.ImportSourceType{}
 	if http := dv.Spec.Source.HTTP; http != nil {
@@ -390,6 +431,8 @@ func (r *ImportReconciler) reconcileVolumeImportSourceCR(syncState *dvSyncState)
 		importSource.Spec.Checkpoints = dv.Spec.Checkpoints
 		importSource.Spec.FinalCheckpoint = &dv.Spec.FinalCheckpoint
 	}
+
+	// zhou: set owner
 
 	if err := controllerutil.SetControllerReference(dv, importSource, r.scheme); err != nil {
 		return err

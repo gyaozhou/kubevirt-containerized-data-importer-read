@@ -284,6 +284,8 @@ const (
 	// ErrIncompatiblePVC provides a const to indicate a clone is not possible due to an incompatible PVC
 	ErrIncompatiblePVC = "ErrIncompatiblePVC"
 
+	// zhou: PVC annotation.
+
 	// SourceHTTP is the source type HTTP, if unspecified or invalid, it defaults to SourceHTTP
 	SourceHTTP = "http"
 	// SourceS3 is the source type S3

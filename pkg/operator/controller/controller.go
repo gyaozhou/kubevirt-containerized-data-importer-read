@@ -94,6 +94,8 @@ func Add(mgr manager.Manager) error {
 	return r.add(mgr)
 }
 
+// zhou: create reconciler
+
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) (*ReconcileCDI, error) {
 	var namespacedArgs cdinamespaced.FactoryArgs
@@ -153,7 +155,12 @@ func newReconciler(mgr manager.Manager) (*ReconcileCDI, error) {
 	callbackDispatcher := callbacks.NewCallbackDispatcher(log, restClient, uncachedClient, scheme, namespace)
 	r.reconciler = sdkr.NewReconciler(r, log, restClient, callbackDispatcher, scheme, mgr.GetCache, createVersionLabel, updateVersionLabel, LastAppliedConfigAnnotation, certPollInterval, finalizerName, false, recorder)
 
+	// zhou: hook function
+
 	r.registerHooks()
+
+	// zhou: add callback create cdi controller releated objects.
+
 	addReconcileCallbacks(r)
 
 	return r, nil
@@ -188,6 +195,8 @@ func (r *ReconcileCDI) SetController(controller controller.Controller) {
 	r.controller = controller
 	r.reconciler.WithController(controller)
 }
+
+// zhou: README, CDI operator handle "CDI" to deploy CDI controller
 
 // Reconcile reads that state of the cluster for a CDI object and makes changes based on the state read
 // and what is in the CDI.Spec
@@ -236,8 +245,13 @@ func (r *ReconcileCDI) Reconcile(_ context.Context, request reconcile.Request) (
 		// Not an issue if progress is still ongoing
 		metrics.SetNotReady()
 	}
+
+	// zhou: framework implemented in "controller-lifecycle-operator-sdk"
+
 	return r.reconciler.Reconcile(request, operatorVersion, reqLogger)
 }
+
+// zhou: add cdi-operator-controller to controller-runtime manager
 
 func (r *ReconcileCDI) add(mgr manager.Manager) error {
 	// Create a new controller
@@ -306,6 +320,9 @@ func (r *ReconcileCDI) getConfigMap() (*corev1.ConfigMap, error) {
 
 	return cm, nil
 }
+
+// zhou: create ConfigMap "cdi-config",
+//       used to determine which CDI instance is "active"
 
 // createOperatorConfig creates operator config map
 func (r *ReconcileCDI) createOperatorConfig(cr client.Object) error {

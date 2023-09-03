@@ -17,6 +17,8 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
 
+// zhou: CDI operator watching ...
+
 // watch registers CDI-specific watches
 func (r *ReconcileCDI) watch() error {
 	if err := r.reconciler.WatchResourceTypes(&corev1.ConfigMap{}, &corev1.Secret{}); err != nil {
@@ -74,6 +76,8 @@ func (r *ReconcileCDI) checkSanity(cr client.Object, reqLogger logr.Logger) (*re
 	return nil, nil
 }
 
+// zhou: uploader?
+
 // sync syncs certificates used by CDU
 func (r *ReconcileCDI) sync(cr client.Object, logger logr.Logger) error {
 	cdi := cr.(*cdiv1.CDI)
@@ -106,6 +110,8 @@ func (r *ReconcileCDI) configMapOwnerDeleted(cm *corev1.ConfigMap) (bool, error)
 
 	return true, nil
 }
+
+// zhou:
 
 func (r *ReconcileCDI) registerHooks() {
 	r.reconciler.

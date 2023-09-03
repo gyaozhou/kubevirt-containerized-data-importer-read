@@ -85,6 +85,8 @@ type HTTPDataSource struct {
 
 var createNbdkitCurl = image.NewNbdkitCurl
 
+// zhou: README,
+
 // NewHTTPDataSource creates a new instance of the http data provider.
 func NewHTTPDataSource(endpoint, accessKey, secKey, certDir string, contentType cdiv1.DataVolumeContentType) (*HTTPDataSource, error) {
 	ep, err := ParseEndpoint(endpoint)

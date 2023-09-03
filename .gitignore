@@ -12,6 +12,10 @@ hack/gen-swagger-doc/*.adoc
 hack/gen-swagger-doc/*.md
 hack/gen-swagger-doc/html5
 **/*.swp
+cscope.files
+cscope.out
 _ci-configs/*
 tests/manifests/out/*
+cscope.files
+cscope.out
 .vscode/

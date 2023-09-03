@@ -64,6 +64,8 @@ type ImportPopulatorReconciler struct {
 // http client to get metrics
 var httpClient *http.Client
 
+// zhou: CDI Populator for VolulmeImportSource
+
 // NewImportPopulator creates a new instance of the import-populator controller
 func NewImportPopulator(
 	ctx context.Context,
@@ -126,6 +128,8 @@ func (r *ImportPopulatorReconciler) getPopulationSource(pvc *corev1.PersistentVo
 	}
 	return volumeImportSource, nil
 }
+
+// zhou: README,
 
 // Import-specific implementation of reconcileTargetPVC
 func (r *ImportPopulatorReconciler) reconcileTargetPVC(pvc, pvcPrime *corev1.PersistentVolumeClaim) (reconcile.Result, error) {
@@ -217,6 +221,9 @@ func (r *ImportPopulatorReconciler) updatePVCForPopulation(pvc *corev1.Persisten
 		cc.UpdateVDDKAnnotations(annotations, vddk)
 		return
 	}
+
+	// zhou: handle source.Blank != nil
+
 	// Our webhook doesn't allow VolumeImportSources without source, so this should never happen.
 	// Defaulting to Blank source anyway to avoid unexpected behavior.
 	annotations[cc.AnnSource] = cc.SourceNone
@@ -241,6 +248,8 @@ func (r *ImportPopulatorReconciler) updateImportAnnotations(pvc, pvcPrime *corev
 	}
 	updateVddkAnnotations(pvc, pvcPrime)
 }
+
+// zhou: README,
 
 // Progress reporting
 
@@ -295,6 +304,8 @@ func (r *ImportPopulatorReconciler) updateImportProgress(podPhase string, pvc, p
 
 	return nil
 }
+
+// zhou: Import Pod
 
 func (r *ImportPopulatorReconciler) getImportPod(pvc *corev1.PersistentVolumeClaim, importPodName string) (*corev1.Pod, error) {
 	pod := &corev1.Pod{}
